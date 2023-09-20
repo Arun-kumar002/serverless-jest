@@ -1,0 +1,227 @@
+service: reconcilation-api-service
+
+frameworkVersion: ">=3.19.0"
+
+plugins:
+  - serverless-offline
+  - serverless-plugin-typescript
+provider:
+  name: reconcilation-api-service
+  runtime: nodejs16.x
+  versionFunctions: false
+  stage: dev
+  region: ap-northeast-1
+  httpApi:
+    cors: false
+  deploymentBucket:
+    # name: ecobillz-custom-deployment-bucket-1234
+    # serverSideEncryption: AES256
+  environment:
+    environment: development
+    keycloakLocalUrl: http://localhost:8080
+    keycloakProdUrl: https://iam.test.ecobillz.com
+    mongoUrl: mongodb+srv://arunkumar:arun0002@cluster0.olrj4zg.mongodb.net/?retryWrites=true&w=majority
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:*
+        - s3:*
+functions:
+  authorize:
+    handler: src/auth/authorizer.authorize
+  merchantoutletauthorize:
+    handler: src/auth/merchantOutletAuth.authorize
+  users:
+    handler: src/handler.users
+    events:
+      - httpApi:
+          path: /user
+          method: post
+          authorizer:
+            name: authorize
+            type: request
+            identitySource: method.request.header.Authorization
+      - httpApi:
+          path: /user
+          method: get
+          authorizer:
+            name: authorize
+            type: reqpostuest
+            identitySource: method.request.header.Authorization
+      - httpApi:
+          path: /user/{id}
+          method: get
+          authorizer:
+            name: authorize
+            type: request
+            identitySource: method.request.header.Authorization
+      - httpApi:
+          path: /user/{id}
+          method: put
+          authorizer:
+            name: authorize
+            type: request
+            identitySource: method.request.header.Authorization
+      - httpApi:
+          path: /user/{id}
+          method: delete
+          authorizer:
+            name: authorize
+            type: request
+            identitySource: method.request.header.Authorization
+      - httpApi:
+          path: /all-roles
+          method: get
+          authorizer:
+            name: authorize
+            type: request
+            identitySource: method.request.header.Authorization
+      - httpApi:
+          path: /user-roles/{id}
+          method: get
+          authorizer:
+            name: authorize
+            type: request
+            identitySource: method.request.header.Authorization
+      - httpApi:
+          path: /user-roles/{id}
+          method: post
+          authorizer:
+            name: authorize
+            type: request
+            identitySource: method.request.header.Authorization
+      - httpApi:
+          path: /user-roles/{id}
+          method: delete
+          authorizer:
+            name: authorize
+            type: request
+            identitySource: method.request.header.Authorization
+  pos:
+    handler: src/handler.posHandler
+    events:
+      - httpApi:
+          path: /pos
+          method: post
+      - httpApi:
+          path: /merchant/{merchatid}/outlet/{outletid}
+          method: get
+          authorizer:
+            name: merchantoutletauthorize
+            type: request
+            identitySource: method.request.header.Authorization
+      - httpApi:
+          path: /merchant/{merchatid}/outlet/{outletid}/users
+          method: get
+          authorizer:
+            name: authorize
+            type: request
+            identitySource: method.request.header.Authorization
+      - httpApi:
+          path: /pos/{id}
+          method: put
+      - httpApi:
+          path: /pos/{id}
+          method: delete
+  srs:
+    handler: src/handler.srsHandler
+    events:
+      - httpApi:
+          path: /srs
+          method: post
+      - httpApi:
+          path: /srs
+          method: get
+  # - httpApi:
+  #     path: /srs
+  #     method: get
+  # - httpApi:
+  #     path: /srs/{id}
+  #     method: get
+  # - httpApi:
+  #     path: /srs/{id}
+  #     method: put
+  # - httpApi:
+  #     path: /srs/{id}
+  #     method: delete
+  # srs_vs_pos:
+  #   handler: src/handler.srsvsPosHandler
+  #   events:
+  #     - httpApi:
+  #         path: /srsvspos
+  #         method: post
+  #     - httpApi:
+  #         path: /srsvspos
+  #         method: get
+  #     - httpApi:
+  #         path: /srsvspos/{id}
+  #         method: get
+  #     - httpApi:
+  #         path: /srsvspos/{id}
+  #         method: put
+  #     - httpApi:
+  #         path: /srsvspos/{id}
+  #         method: delete
+  # pos_vs_srs:
+  #   handler: src/handler.posVsSrsHandler
+  #   events:
+  #     - httpApi:
+  #         path: /posvssrs
+  #         method: post
+  #     - httpApi:
+  #         path: /posvssrs
+  #         method: get
+  #     - httpApi:
+  #         path: /posvssrs/{id}
+  #         method: get
+  #     - httpApi:
+  #         path: /posvssrs/{id}
+  #         method: put
+  #     - httpApi:
+  #         path: /posvssrs/{id}
+  #         method: delete
+
+package:
+  # individually: true
+  # excludeDevDependencies: true
+  patterns:
+    # include
+    - src/**
+    # exclude
+    - "!*"
+    - "!__tests__/**"
+    - "!documentation/**"
+    - "!config/**"
+    - "!node_modules/**"
+    # - '!layerSourceTarball.tar.gz'
+
+# resources:
+#   Resources:
+#     fileUploadBucket:
+#       Type: AWS::S3::Bucket
+#       Properties:
+#         BucketName: ecobillzBucket123
+
+custom:
+  fileUploaderBucket: ecobillzBucket123
+  deploymentBucket:
+    versioning: true
+    accelerate: true
+    blockPublicAccess: true
+    enabled: true
+    tags:
+      - Key: Environment
+        Value: production
+# layers:
+#   users:
+#     path: node_modules
+#     name:  ${sls:stage}-layerName
+#     description: layer for node_modules
+#     compatibleRuntimes:
+#       - nodejs16.x
+#       - nodejs14.x
+#       - nodejs12.x
+#     compatibleArchitectures:
+#       - x86_64
+#       - arm64
+#     retain: false
